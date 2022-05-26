@@ -1,13 +1,10 @@
 package com.mclowicz.weatherstack.presentation.detail
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.room.rxjava3.EmptyResultSetException
 import com.mclowicz.weatherstack.data.local.WeatherEntity
 import com.mclowicz.weatherstack.data.local.mapToWeather
-import com.mclowicz.weatherstack.data.remote.mapToWeatherEntity
 import com.mclowicz.weatherstack.domain.repository.WeatherRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
@@ -27,59 +24,28 @@ class DetailVM @Inject constructor(
 
     fun searchQuery(query: String) {
         disposable.add(
-            weatherRepository.getWeatherFromLocal(query = query)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe({ response ->
-                    _viewState.value = DetailViewState
-                        .Content(data = mapToWeather(weatherEntity = response))
-                }, { throwable ->
-                    when (throwable) {
-                        is EmptyResultSetException -> {
-                            fetchWeather(query = query)
-                        }
-                        else -> {
-                            _viewState.value =
-                                DetailViewState.Error(message = throwable.localizedMessage)
-                        }
-                    }
-                })
-        )
-    }
-
-    private fun fetchWeather(query: String) {
-        disposable.add(
-            weatherRepository.fetchWeatherFromRemote(query = query)
+            weatherRepository.searchQuery(query = query)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnSubscribe {
                     _viewState.value = DetailViewState.Loading
                 }
-                .subscribe({ response ->
-                    if (response.success != null) {
-                        _viewState.value = DetailViewState.Error(message = "City not found.")
-                    } else {
-                        val weatherEntity = mapToWeatherEntity(weatherResponse = response)
-                        saveWeather(weatherEntity = weatherEntity)
-                        _viewState.value = DetailViewState.Content(data = mapToWeather(weatherEntity))
-                    }
-                }, { throwable ->
+                .subscribe({
+                    saveWeather(weatherEntity = it)
+                    _viewState.value = DetailViewState
+                        .Content(data = mapToWeather(weatherEntity = it))
+                }, {
                     _viewState.value =
-                        DetailViewState.Error(
-                            message = "Please, check your internet connection and try again."
-                        )
+                        DetailViewState.Error(message = it.localizedMessage)
                 })
         )
     }
 
     private fun saveWeather(weatherEntity: WeatherEntity) {
         disposable.add(
-            weatherRepository.saveWeather(weatherEntity)
+            weatherRepository.saveWeather(weatherEntity = weatherEntity)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .doOnComplete {
-                    Log.d("Weatherstack", "saved")
-                }
                 .subscribe()
         )
     }
