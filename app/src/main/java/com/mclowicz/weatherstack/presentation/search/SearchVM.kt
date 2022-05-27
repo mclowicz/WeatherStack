@@ -1,6 +1,6 @@
 package com.mclowicz.weatherstack.presentation.search
 
-import androidx.lifecycle.ViewModel
+import com.mclowicz.weatherstack.presentation.base.BaseVM
 import com.mclowicz.weatherstack.util.SingleLiveEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -8,7 +8,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SearchVM @Inject constructor(
 
-) : ViewModel() {
+) : BaseVM() {
 
     val searchEvent = SingleLiveEvent<SearchEvent>()
 
